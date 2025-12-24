@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pfx-tls-operator
+  namespace: pfx-tls-system
+  labels:
+    app: pfx-tls-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pfx-tls-operator
+  template:
+    metadata:
+      labels:
+        app: pfx-tls-operator
+    spec:
+      serviceAccountName: pfx-tls-operator
+      containers:
+        - name: operator
+          image: ghcr.io/hellices/kubernetes-pfx-tls:latest
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 200m
+              memory: 128Mi
+            requests:
+              cpu: 100m
+              memory: 64Mi
