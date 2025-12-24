@@ -26,6 +26,7 @@ type SecretController struct {
 	secretsSynced cache.InformerSynced
 	workqueue     workqueue.RateLimitingInterface
 	converter     *converter.PFXConverter
+	ctx           context.Context
 }
 
 // NewSecretController creates a new SecretController
@@ -57,6 +58,16 @@ func NewSecretController(
 func (c *SecretController) Run(workers int, stopCh <-chan struct{}) error {
 	defer utilruntime.HandleCrash()
 	defer c.workqueue.ShutDown()
+
+	// Create context from stopCh
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	c.ctx = ctx
+
+	go func() {
+		<-stopCh
+		cancel()
+	}()
 
 	klog.Info("Starting Secret controller")
 
@@ -205,7 +216,10 @@ func (c *SecretController) processSecret(secret *corev1.Secret) error {
 	secretCopy.Annotations[converter.AnnotationConverted] = "true"
 
 	// Update the secret
-	_, err = c.kubeClient.CoreV1().Secrets(secret.Namespace).Update(context.TODO(), secretCopy, metav1.UpdateOptions{})
+	ctx, cancel := context.WithTimeout(c.ctx, 30*time.Second)
+	defer cancel()
+	
+	_, err = c.kubeClient.CoreV1().Secrets(secret.Namespace).Update(ctx, secretCopy, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to update secret: %w", err)
 	}
@@ -225,7 +239,10 @@ func (c *SecretController) getPassword(secret *corev1.Secret) (string, error) {
 	secretKey := secret.Annotations[converter.AnnotationPFXPasswordSecretKey]
 
 	if secretName != "" && secretKey != "" {
-		passwordSecret, err := c.kubeClient.CoreV1().Secrets(secret.Namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
+		ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second)
+		defer cancel()
+		
+		passwordSecret, err := c.kubeClient.CoreV1().Secrets(secret.Namespace).Get(ctx, secretName, metav1.GetOptions{})
 		if err != nil {
 			return "", fmt.Errorf("failed to get password secret: %w", err)
 		}

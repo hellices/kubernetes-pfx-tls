@@ -1,6 +1,6 @@
 module github.com/hellices/kubernetes-pfx-tls
 
-go 1.24.11
+go 1.21
 
 require (
 	k8s.io/api v0.28.4
