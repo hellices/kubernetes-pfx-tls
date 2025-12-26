@@ -218,7 +218,7 @@ func (c *SecretController) processSecret(secret *corev1.Secret) error {
 	// Update the secret
 	ctx, cancel := context.WithTimeout(c.ctx, 30*time.Second)
 	defer cancel()
-	
+
 	_, err = c.kubeClient.CoreV1().Secrets(secret.Namespace).Update(ctx, secretCopy, metav1.UpdateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to update secret: %w", err)
@@ -241,7 +241,7 @@ func (c *SecretController) getPassword(secret *corev1.Secret) (string, error) {
 	if secretName != "" && secretKey != "" {
 		ctx, cancel := context.WithTimeout(c.ctx, 10*time.Second)
 		defer cancel()
-		
+
 		passwordSecret, err := c.kubeClient.CoreV1().Secrets(secret.Namespace).Get(ctx, secretName, metav1.GetOptions{})
 		if err != nil {
 			return "", fmt.Errorf("failed to get password secret: %w", err)
